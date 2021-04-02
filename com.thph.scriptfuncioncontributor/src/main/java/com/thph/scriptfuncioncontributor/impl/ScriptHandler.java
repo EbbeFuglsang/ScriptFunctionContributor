@@ -1,29 +1,24 @@
 package com.thph.scriptfuncioncontributor.impl;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.ur.urcap.api.contribution.installation.CreationContext;
 import com.ur.urcap.api.domain.InstallationAPI;
 import com.ur.urcap.api.domain.URCapInfo;
 import com.ur.urcap.api.domain.function.Function;
 import com.ur.urcap.api.domain.function.FunctionException;
 import com.ur.urcap.api.domain.function.FunctionModel;
+import com.ur.urcap.api.domain.script.ScriptWriter;
 
 /**
- * This class was inspired and contains code from following link:
- * https://github.com/BomMadsen/URCap-ScriptWrapper. Responsible for handling
- * the readings of script files.
+ * This class handles reading script files located in resource folder of the
+ * project. It also insert the recognized function in the script file into the
+ * functionmodel, which is accessible through polyscrope interface.
  * 
  * @author ur
  *
@@ -38,9 +33,9 @@ public class ScriptHandler {
 	}
 
 	/**
-	 * This method is used to find method name and parameters to add to
-	 * functionmodel.
-	 * 
+	 * This method  extracts the method name and parameters in each
+	 * line read from the script file and add to it to the
+	 * function model.
 	 * @param line
 	 */
 	private Matcher extractMethodSignature(String line) {
@@ -67,7 +62,7 @@ public class ScriptHandler {
 					System.out.println("Param: " + param);
 					parameters[i] = param;
 				}
-				
+
 				this.addFunction(name, parameters);
 
 			} else {
@@ -79,6 +74,12 @@ public class ScriptHandler {
 
 	}
 
+	/**
+	 * This methods reads the specified file at the absolute file path The file is
+	 * read line-by-line (for processor load concerns) The complete content is
+	 * returned with \n for each line break
+	 * @param path
+	 */
 	public void addFunctionModels(String path) {
 		try {
 
@@ -96,11 +97,6 @@ public class ScriptHandler {
 			}
 			bufferedReader.close();
 			stream.close();
-			
-
-			// System.out.println("Read the file: " + file.getPath());
-			// System.out.println("The content was:");
-			// System.out.println(stringBuffer.toString());
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -108,12 +104,14 @@ public class ScriptHandler {
 
 	}
 
-	/*
+	/**
 	 * This methods reads the specified file at the absolute file path The file is
 	 * read line-by-line (for processor load concerns) The complete content is
 	 * returned with \n for each line break
+	 * @param path
+	 * @return a string of the read script file.
 	 */
-	public String readScriptFile(String path) {
+	public String readScriptFile(String path, ScriptWriter writer) {
 
 		try {
 
@@ -123,16 +121,13 @@ public class ScriptHandler {
 			String line;
 			while ((line = bufferedReader.readLine()) != null) {
 
+				writer.appendLine(line);
 				stringBuffer.append(line);
 				stringBuffer.append("\n");
 
 			}
 			bufferedReader.close();
 			stream.close();
-
-			// System.out.println("Read the file: " + file.getPath());
-			// System.out.println("The content was:");
-			// System.out.println(stringBuffer.toString());
 
 			return stringBuffer.toString();
 		} catch (IOException e) {
@@ -143,43 +138,39 @@ public class ScriptHandler {
 
 	}
 
-	/*
+
+	/**
 	 * This method finds all script files in the programs folder. Argument needed is
-	 * the path for the directory to search in. It returns a File[] (file array) of
+	 * the path for the directory to search in. 
 	 * all available files.
+	 * @param directory
+	 * @return It returns a String array of file directory.
 	 */
-	public File[] findScriptFiles(String directory) {
+	public ArrayList<String> findScriptFiles(String directory) {
 
-		URL resource;
-		File[] files;
-		
-		ClassLoader classLoader = getClass().getClassLoader();
-		
-		resource = getClass().getResource(directory);
-		
-		System.out.println("PATH: " + resource.getPath());
+		ArrayList<String> filepaths = new ArrayList<String>();
 
-		File dir = new File(classLoader.getResource("fileTest.txt").getFile());
+		InputStream stream = getClass().getResourceAsStream(directory);
 
-		if (!dir.isDirectory()) {
-			System.out.println("NOT a directory!");
-		}
+		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stream));
 
-		files = dir.listFiles(new FilenameFilter() {
-			public boolean accept(File dir, String name) {
-				return name.toLowerCase().endsWith(".script");
+		try {
+
+			String line;
+			while ((line = bufferedReader.readLine()) != null) {
+
+				if (line.endsWith(".script")) {
+
+					filepaths.add(directory + line);
+				}
+
 			}
-		});
-		Arrays.sort(files);
 
-		// Just for debugging
-		System.out.println("Number of script files found: " + files.length);
-		for (int i = 0; i < files.length; i++) {
-			String filename = files[i].getName();
-			System.out.println("File " + i + " is " + filename);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 
-		return files;
+		return filepaths;
 	}
 
 	private void addFunction(String name, String... argumentNames) {
@@ -188,7 +179,6 @@ public class ScriptHandler {
 			try {
 				functionModel.addFunction(name, argumentNames);
 			} catch (FunctionException e) {
-				// See e.getMessage() for explanation
 			}
 		}
 	}
