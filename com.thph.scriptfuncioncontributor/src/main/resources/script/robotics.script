@@ -1,13 +1,472 @@
-#
 ####
-def rpy2rotmat(u,r):
+# calculations to convert between different representations on robot orientation
+####
+####
+# convert from RPY to rotation matrix
+##
+# R = Rz(yaw)*Ry(pitch)*Rx(roll) 
+####
+def rpy2rotmat(rpy):
 	
-	return u+r
+	gamma = rpy[0]	#roll
+	beta = rpy[1]	#pitch
+	alpha = rpy[2]	#yaw
+
+	# trigonometric
+	ca = cos(alpha)
+	cb = cos(beta)
+	cg = cos(gamma)
+	sa = sin(alpha)
+	sb = sin(beta)
+	sg = sin(gamma)
+  
+	# column 1
+	r11 = ca*cb
+	r21 = sa*cb
+	r31 = -sb
+	# column 2
+	r12 = ca*sb*sg-sa*cg
+	r22 = sa*sb*sg+ca*cg
+	r32 = cb*sg
+	# column 3
+	r13 = ca*sb*cg+sa*sg
+	r23 = sa*sb*cg-ca*sg
+	r33 = cb*cg
+
+	# elements are represented as an array
+	rotmat = [ r11, r21, r31, r12, r22, r32, r13, r23, r33 ]
+	
+	return rotmat
 end
+####
+####
+# convert from rotation matrix to RPY
+####
+def rotmat2rpy(rotmat):
 
-def rotmat2rpy(r,v):
+	# array to matrix
+	r11 = rotmat[0]
+	r21 = rotmat[1]
+	r31 = rotmat[2]
+	r12 = rotmat[3]
+	r22 = rotmat[4]
+	r32 = rotmat[5]
+	r13 = rotmat[6]
+	r23 = rotmat[7]
+	r33 = rotmat[8]
 
-	return r+v
+	# rotation matrix to rpy
+	beta = atan2(-r31,sqrt(r11*r11+r21*r21))
+
+	if beta > d2r(89.99):
+		beta = d2r(89.99)
+		alpha = 0
+		gamma = atan2(r12,r22)
+	elif beta < -d2r(89.99):
+		beta = -d2r(89.99)
+		alpha = 0
+		gamma = -atan2(r12,r22)
+	else:
+		cb = cos(beta)
+		alpha = atan2(r21/cb,r11/cb)
+		gamma = atan2(r32/cb,r33/cb)
+	end
+
+	rpy = [ gamma, beta, alpha]
+  
+	return rpy
 end
+####
+####
+# convert from rotation vector to rotation matrix
+####
+def rotvec2rotmat(rotvec):
 
+	rx = rotvec[0]
+	ry = rotvec[1]
+	rz = rotvec[2]
+
+	# rotation vector to angle and unit vector
+	theta = sqrt(rx*rx + ry*ry + rz*rz)
+	ux = rx/theta
+	uy = ry/theta
+	uz = rz/theta
+	cth = cos(theta)
+	sth = sin(theta)
+	vth = 1-cos(theta)
+
+	# column 1
+	r11 = ux*ux*vth + cth
+	r21 = ux*uy*vth + uz*sth
+	r31 = ux*uz*vth - uy*sth
+	# column 2
+	r12 = ux*uy*vth - uz*sth
+	r22 = uy*uy*vth + cth
+	r32 = uy*uz*vth + ux*sth
+	# column 3
+	r13 = ux*uz*vth + uy*sth
+	r23 = uy*uz*vth - ux*sth
+	r33 = uz*uz*vth + cth
+
+	# elements are represented as an array
+	rotmat = [ r11, r21, r31, r12, r22, r32, r13, r23, r33 ]
+	
+	return rotmat
+end
+####
+####
+# convert from rotation matrix to rotation vector
+####
+def rotmat2rotvec(rotmat):
+
+	# array to matrix
+	r11 = rotmat[0]
+	r21 = rotmat[1]
+	r31 = rotmat[2]
+	r12 = rotmat[3]
+	r22 = rotmat[4]
+	r32 = rotmat[5]
+	r13 = rotmat[6]
+	r23 = rotmat[7]
+	r33 = rotmat[8]
+
+	# rotation matrix to rotation vector
+	theta = acos((r11+r22+r33-1)/2)
+	sth = sin(theta)
+	
+	if ( (theta > d2r(179.99)) or (theta < d2r(-179.99)) )
+		theta = d2r(180)
+		if (r21 < 0):
+			if (r31 < 0):
+				ux = sqrt((r11+1)/2)
+				uy = -sqrt((r22+1)/2)
+				uz = -sqrt((r33+1)/2)
+			else:
+				ux = sqrt((r11+1)/2)
+				uy = -sqrt((r22+1)/2)
+				uz = sqrt((r33+1)/2)
+			end
+		else:
+			if (r31 < 0):
+				ux = sqrt((r11+1)/2)
+				uy = sqrt((r22+1)/2)
+				uz = -sqrt((r33+1)/2)
+			else:
+				ux = sqrt((r11+1)/2)
+				uy = sqrt((r22+1)/2)
+				uz = sqrt((r33+1)/2)
+			end
+		end
+	else:
+		ux = (r32-r23)/(2*sth)
+		uy = (r13-r31)/(2*sth)
+		uz = (r21-r12)/(2*sth)
+	end
+	
+	rotvec = [(theta*ux),(theta*uy),(theta*uz)]
+
+	return rotvec
+end
+####
+####
+# cross product of two vectors u and v
+####
+def cross_product(u, v):
+	
+	u1 = u[0]
+	u2 = u[1]
+	u3 = u[2]
+	v1 = v[0]
+	v2 = v[1]
+	v3 = v[2]
+	
+	s = [ (u2*v3-u3*v2), (u3*v1-u1*v3), (u1*v2-u2*v1) ]
+	
+	return s
+end
+####
+####
+# represent X, Y, Z tool coordinates in the base frame
+##
+#### input arguments
+# p_tool: X, Y, and Z coordinates in the tool frame
+# rotvec: the tool orientation
+##
+#### return values
+# p_base: X, Y, and Z coordinates in the base frame
+##
+#### mathematic equation
+# p_base = rotmat * p_tool 
+##
+####
+def frame_tool2base(rotvec, p_tool):
+
+	pose_rotvec = p[ 0, 0, 0, rotvec[0], rotvec[1], rotvec[2] ]
+	pose_p_tool = p[ p_tool[0], p_tool[1], p_tool[2], 0, 0, 0 ]
+		
+	p_base = pose_trans(pose_rotvec, pose_p_tool)
+
+	return p_base
+end
+####
+####
+# represent X, Y, Z tool coordinates in the tool frame
+##
+#### input arguments
+# p_base: X, Y, and Z coordinates in the base frame
+# rotvec: the tool orientation
+##
+#### return values
+# p_tool: X, Y, and Z coordinates in the tool frame
+##
+#### mathematic equation
+# p_base = rotmat * p_tool 
+# => p_tool = inv(rotmat) * p_base
+##
+####
+def frame_base2tool(rotvec, p_base):
+
+	pose_rotvec = p[ 0, 0, 0, rotvec[0], rotvec[1], rotvec[2] ]
+	pose_p_base = p[ pose_p_base[0], pose_p_base[1], pose_p_base[2], 0, 0, 0 ]
+		
+	p_tool = pose_trans(inv(pose_rotvec), pose_p_base)
+
+	return p_tool
+end
+####
+
+
+
+
+####
+# Exercises
+####
+####
+# get feature plane from three points
+####
+##
+# p1: origin
+# p2: determines positive X axis (direction from p1 to p2 is X axis)
+# p3: determines sign of Y axis  
+## 
+####
+def get_feature_plane(p1, p2, p3):
+	
+	# Step 1. Get the direction vectors
+	d12 = [ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] ]
+	d13 = [ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] ]
+	
+	# Step 2. Get the direction vector of Z axis by cross product of d12 and d13
+	dz = cross_product(d12, d13)
+	
+	# Step 3. Get the X and Z unit direction vectors by normalizing d12 and dz
+	temp = norm(d12)
+	ux = [ d12[0]/temp, d12[1]/temp, d12[2]/temp ]
+	temp = norm(dz)
+	uz = [ dz[0]/temp, dz[1]/temp, dz[2]/temp ]
+	
+	# Step 4. Get Y unit direction vector by cross product of uz and ux
+	uy = cross_product(uz, ux)
+	
+	# Step 5. Get the rotation matrix from the unit direction vectors
+	rotmat = [ ux[0], ux[1], ux[2], uy[0], uy[1], uy[2], uz[0], uz[1], uz[2] ]
+	
+	# Step 6. Get the rotation vector from the rotation matrix
+	rotvec = rotmat2rotvec(rotmat)
+	
+	# Step 7. Get the feature plane with the origin at p1 and the frame achieved at step 6
+	feature_plane = [ p1[0], p1[1], p1[2], rotvec[0], rotvec[1], rotvec[2] ]
+	
+	return feature_plane
+end
+####
+####
+# returns force and torque values in tool coordinate system
+####
+# reference variables are saved as pose variable to be used for pose_trans() 
+##
+# force_T: force values (Fx, Fy, Fz) in tool coordinate system at tcp position as origin
+# torque_T: torque values (Tx, Ty, Tz) in tool coordinate system at tcp position as origin
+# force_B: force values (Fx, Fy, Fz) in base coordinate system at tcp position as origin
+# torque_B: torque values (Tx, Ty, Tz) in base coordinate system at tcp position as origin
+# tcp: tcp position and tcp orientation
+# rotation_BT: Tool orientation
+####
+# mathematic calcluation
+##
+# force_B = rotmat * force_T 
+# => force_T = inv(rotmat) * force_B
+####
+def get_tcp_force_tool():
+	force_torque = get_tcp_force()
+	force_B = [ force_torque[0], force_torque[1], force_torque[2] ]
+	torque_B = [ force_torque[3], force_torque[4], force_torque[5] ]
+	tcp = get_actual_tcp_pose()
+	rotvec = [ tcp[3], tcp[4], tcp[5] ]	
+	force_T = frame_base2tool( rotvec, force_B )
+	torque_T = frame_base2tool( rotvec, torque_B )
+	force_torque_T = p[ force_T[0], force_T[1], force_T[2], torque_T[0], torque_T[1], torque_T[2] ]
+	return force_torque_T
+end
+####
+####
+# rotate the orientation with respect to the base frame
+##
+#### input arguments
+# pose: the TCP pose
+# angle: the rotational angle
+# axis: the axis in the base frame
+#		1: X axis
+#		2: Y axis
+#		3: Z axis (by default)
+##
+#### return values
+# target: the target TCP pose
+##
+#### mathematic equation
+# target = pose * rotation
+##
+####
+def rotate_base(pose, angle, axis=3):
+
+	rotvec = [ pose[3], pose[4], pose[5] ]
+	if (axis == 1):
+		axis_tool = frame_base2tool(rotvec, [1,0,0])
+	elif (axis == 2): 
+		axis_tool = frame_base2tool(rotvec, [0,1,0])
+	else:
+		axis_tool = frame_base2tool(rotvec, [0,0,1])
+	end
+		
+	pose_rot = p[ 0, 0, 0, angle*axis_tool[0], angle*axis_tool[1], angle*axis_tool[2] ]
+		
+	target = pose_trans(pose, pose_rot)
+
+	return target
+end
+####
+####
+# get DH parameters
+##
+#### input arguments
+# gen: the generation of the robot
+#		3: CB3
+#		5: e-Series
+# model: the robot model
+#		3: UR3/UR3e
+#		5: UR5/UR5e
+#		10: UR10/UR10e
+##
+#### return values
+# a: translational offset in x axis of n frame (returned in the pose variable format)
+# d: translational offset in z axis of n-1 frame (returned in the pose variable format)
+# alpha: rotatinal offset in x axis of n frame (returned in the pose variable format)
+##
+####
+def get_dh_parameter(gen,model):
+
+	a_pose = p[ 0, 0, 0, 0, 0, 0 ]
+	d_pose = p[ 0, 0, 0, 0, 0, 0 ]
+	alpha_pose = p[ d2r(90), 0, 0, d2r(90), -d2r(90), 0 ]
+
+	if (gen == 3):
+		if (model == 3): 
+			a_pose = p[ 0, -0.24365, -0.21325, 0, 0, 0 ]
+			d_pose = p[ 0.1519, 0, 0, 0.11235, 0.08535, 0.0819 ]
+		elif (model == 5):
+			a_pose = p[ 0, -0.425, -0.39225, 0, 0, 0 ]
+			d_pose = p[ 0.089159, 0, 0, 0.10915, 0.09465, 0.0823 ]
+		elif (model == 10):
+			a_pose = p[ 0, -0.612, -0.5723, 0, 0, 0 ]
+			d_pose = p[ 0.1273, 0, 0, 0.163941, 0.1157, 0.0922 ]
+		end
+	elif (gen == 5 ):
+		if (model == 3): 
+			a_pose = p[ 0, -0.24355, -0.2132, 0, 0, 0 ]
+			d_pose = p[ 0.15185, 0, 0, 0.13105, 0.08535, 0.0921 ]
+		elif (model == 5):
+			a_pose = p[ 0, -0.425, -0.3922, 0, 0, 0 ]
+			d_pose = p[ 0.1625, 0, 0, 0.1333, 0.0997, 0.0996 ]
+		elif (model == 10):
+			a_pose = p[ 0, -0.6127, -0.57155, 0, 0, 0 ]
+			d_pose = p[ 0.1807, 0, 0, 0.17415, 0.11985, 0.11655 ]
+		end
+	end
+	
+	dh_parameter = [ a_pose, d_pose, alpha_pose ]
+
+	return dh_parameter
+end
+####
+####
+# get the transformation pose from n-1 to n frame
+##
+#### input arguments
+# gen: the generation of the robot
+#		3: CB3
+#		5: e-Series
+# model: the robot model
+#		3: UR3/UR3e
+#		5: UR5/UR5e
+#		10: UR10/UR10e
+# n: frame number
+# theta: joint positions
+##
+#### return values
+# pose: transformation pose (identical to the transformation matrix)
+##
+#### mathematic equation
+# T = trans_z(d) * rot_z(theta) * trans_x(a) * rot_x(alpha)
+##
+####
+def get_transformation_pose_frame(gen, model, n, theta):
+
+	# load the DH parameters
+	dh_parameter = get_dh_parameter(gen, model)
+	a_pose = dh_parameter[0]
+	d_pose = dh_parameter[1]
+	alpha_pose = dh_parameter[2]
+	
+	trans_z = p[0,0,d_pose[n-1],0,0,0]
+	rot_z = p[0,0,0,0,0,theta[n-1]]
+	trans_x = p[a_pose[n-1],0,0,0,0,0]
+	rot_x = p[0,0,0,alpha_pose[n-1],0,0]
+	
+	pose = pose_trans(trans_z,pose_trans(rot_z,(pose_trans(trans_x,rot_x))))
+
+	return pose
+end
+####
+
+####
+# get the origin position of the wrist
+##
+#### input arguments
+# gen: the generation of the robot
+#		3: CB3
+#		5: e-Series
+# model: the robot model
+#		3: UR3/UR3e
+#		5: UR5/UR5e
+#		10: UR10/UR10e
+# theta: joint positions
+##
+#### return values
+# position: X, Y, Z coordinates of wrist 1 origin
+##
+####
+def get_wrist_origin(gen, model, theta, flange_pose):
+
+	pose_4 = get_transformation_pose_frame(gen, model, 4, theta)
+	pose_5 = get_transformation_pose_frame(gen, model, 5, theta)
+	pose_6 = get_transformation_pose_frame(gen, model, 6, theta)
+	pose_46 = pose_trans(pose_4, pose_trans(pose_5, pose_6))
+	
+	wrist_pose = pose_trans(flange_pose, pose_inv(pose_46))
+	wrist_position = [ wrist_pose[0], wrist_pose[1], wrist_pose[2] ]
+	
+	return wrist_position
+end
+####
+#### developed by Universal Robots Global Applications Management
 
