@@ -83,7 +83,7 @@ public class ScriptHandler {
 	public void addFunctionModels(String path) {
 		try {
 
-			InputStream stream = getClass().getResourceAsStream("/script/robotics.script");
+			InputStream stream = getClass().getResourceAsStream(path);
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stream));
 			StringBuffer stringBuffer = new StringBuffer();
 			String line;
@@ -115,7 +115,7 @@ public class ScriptHandler {
 
 		try {
 
-			InputStream stream = getClass().getResourceAsStream("/script/robotics.script");
+			InputStream stream = getClass().getResourceAsStream(path);
 			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stream));
 			StringBuffer stringBuffer = new StringBuffer();
 			String line;

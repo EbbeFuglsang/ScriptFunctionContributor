@@ -46,32 +46,10 @@ public class ScriptInstallationNodeContribution implements InstallationNodeContr
 	@Override
 	public void generateScript(ScriptWriter writer) {
 
-		String fileText = handler.readScriptFile(SCRIPT_FILE_PATH,writer);
-
-//		writer.appendLine(fileText);
+		this.handler.readScriptFile(SCRIPT_FILE_PATH,writer);
 
 	}
 
-	private void addFunctions() {
-
-		files = handler.findScriptFiles(SCRIPT_PATH);
-		System.out.println("Size: " + files.size());
-
-		for (int i = 0; i < files.size(); i++) {
-			handler.addFunctionModels(files.get(i));
-		}
-
-	}
-
-	private void addScript(ScriptWriter writer) {
-
-		for (int i = 0; i < files.size(); i++) {
-
-			String fileText = handler.readScriptFile(files.get(i),writer);
-
-			writer.appendRaw(fileText);
-		}
-
-	}
+	
 
 }
