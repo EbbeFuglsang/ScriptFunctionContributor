@@ -1,0 +1,3 @@
+def get_tcp_pose(feature=p[0,0,0,0,0,0]):
+	return pose_trans(pose_inv(feature), get_actual_tcp_pose())
+end

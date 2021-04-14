@@ -12,7 +12,7 @@ import com.ur.urcap.api.domain.script.ScriptWriter;
 public class ScriptInstallationNodeContribution implements InstallationNodeContribution {
 
 	private static final String SCRIPT_PATH = "/script/";
-	private static final String SCRIPT_FILE_PATH = "/script/robotics.script";
+	private static final String SCRIPT_FILE_PATH = "/script/get_tcp_pose.script";
 
 	private ScriptHandler handler;
 

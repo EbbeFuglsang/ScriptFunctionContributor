@@ -53,6 +53,15 @@ public class ScriptHandler {
 			System.out.println("Name: " + m.group(1));
 			System.out.println("Found parameter: (" + m.group(2) + ")");
 
+			while ( parameter.contains("=")) {
+				if ( parameter.contains("]")) {
+					parameter = parameter.substring(0,parameter.indexOf("="))+parameter.substring(parameter.indexOf("]")+1);
+				}else
+				{
+					parameter = parameter.substring(0,parameter.indexOf("="))+parameter.substring(parameter.indexOf(","));
+				}
+			}
+
 			if (parameter.contains(",")) {
 				parameters = parameter.split(",");
 
@@ -66,6 +75,7 @@ public class ScriptHandler {
 				this.addFunction(name, parameters);
 
 			} else {
+				System.out.println("Add parameter: (" + parameter + ")");
 				this.addFunction(name, parameter);
 			}
 		}
