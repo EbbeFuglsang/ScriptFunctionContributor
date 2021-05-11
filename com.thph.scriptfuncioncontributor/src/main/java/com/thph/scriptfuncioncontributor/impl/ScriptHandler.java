@@ -33,6 +33,30 @@ public class ScriptHandler {
 	}
 
 	/**
+	 * This method  straps the a parameter default 
+	 * assignment from the string 
+	 * @param the parameter String
+	 */
+	private String removeDefaultAssignment(String parameter) {
+		if(parameter.contains("=")) {
+			parameter = parameter.substring(0,parameter.indexOf("="));
+		}
+		return parameter;
+	}
+
+	/**
+	 * This method  straps the lists/poses from script arguments 
+	 * Sensitive construction if the script file have issues
+	 * @param the parameters String
+	 */
+	private String removeLists(String parameters) {
+		while ( parameters.contains("[")) {
+			parameters = parameters.substring(0,parameters.indexOf("[")) + parameters.substring(parameters.indexOf("]")+1);
+		}
+		return parameters;
+	}
+	
+	/**
 	 * This method  extracts the method name and parameters in each
 	 * line read from the script file and add to it to the
 	 * function model.
@@ -53,14 +77,7 @@ public class ScriptHandler {
 			System.out.println("Name: " + m.group(1));
 			System.out.println("Found parameter: (" + m.group(2) + ")");
 
-			while ( parameter.contains("=")) {
-				if ( parameter.contains("]")) {
-					parameter = parameter.substring(0,parameter.indexOf("="))+parameter.substring(parameter.indexOf("]")+1);
-				}else
-				{
-					parameter = parameter.substring(0,parameter.indexOf("="))+parameter.substring(parameter.indexOf(","));
-				}
-			}
+			parameter = removeLists(parameter); 
 
 			if (parameter.contains(",")) {
 				parameters = parameter.split(",");
@@ -68,6 +85,7 @@ public class ScriptHandler {
 				for (int i = 0; i < parameters.length; i++) {
 					String temp = parameters[i];
 					String param = temp.replace(" ", "");
+					param = removeDefaultAssignment(param);
 					System.out.println("Param: " + param);
 					parameters[i] = param;
 				}
@@ -203,5 +221,10 @@ public class ScriptHandler {
 			}
 		}
 	}
+	
+	public static void main(String[] args){	
+		new ScriptHandler(null).extractMethodSignature("def test(pose=p[0,0,0,0,0,0], register  =   [23,34], ttt)");
+		
+	}	
 
 }
