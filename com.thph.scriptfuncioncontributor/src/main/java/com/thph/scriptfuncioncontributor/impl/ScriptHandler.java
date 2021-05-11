@@ -81,21 +81,21 @@ public class ScriptHandler {
 
 			if (parameter.contains(",")) {
 				parameters = parameter.split(",");
-
-				for (int i = 0; i < parameters.length; i++) {
-					String temp = parameters[i];
-					String param = temp.replace(" ", "");
-					param = removeDefaultAssignment(param);
-					System.out.println("Param: " + param);
-					parameters[i] = param;
-				}
-
-				this.addFunction(name, parameters);
-
-			} else {
-				System.out.println("Add parameter: (" + parameter + ")");
-				this.addFunction(name, parameter);
 			}
+			else {
+				parameters = new String[1];
+				parameters[0]=parameter;
+			}
+
+			for (int i = 0; i < parameters.length; i++) {
+				String temp = parameters[i];
+				String param = temp.replace(" ", "");
+				param = removeDefaultAssignment(param);
+				System.out.println("Param: " + param);
+				parameters[i] = param;
+			}
+			this.addFunction(name, parameters);
+
 		}
 
 		return m;
