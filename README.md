@@ -1,4 +1,4 @@
-__Script_function_contributor__
+__ScriptFunctionContributor__
 
 URCap sample that, like the samples ScriptFunctionSwing and ScriptFunctionHTML, demonstrates the principle of Function and FunctionModel.
 
